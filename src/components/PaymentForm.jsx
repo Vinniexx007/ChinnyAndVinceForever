@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { motion } from 'framer-motion';
 
-const PaymentForm = ({ onCancel }) => {
+const PaymentForm = ({ onCancel, onSuccess }) => {
   const stripe = useStripe();
   const elements = useElements();
   const [amount, setAmount] = useState('');
@@ -32,9 +32,24 @@ const PaymentForm = ({ onCancel }) => {
     setProcessing(true);
     setError(null);
 
-    // Note: In production, you'll need to create a payment intent on your backend
-    // This is a simplified example
     try {
+      // Save donation to server
+      const donationResponse = await fetch('http://localhost:3001/api/donations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          donorName: donorName.trim(),
+          amount: parseFloat(amount),
+          isAnonymous,
+        }),
+      });
+
+      if (!donationResponse.ok) {
+        throw new Error('Failed to save donation');
+      }
+
       // Here you would call your backend to create a payment intent
       // const response = await fetch('/create-payment-intent', {
       //   method: 'POST',
@@ -50,6 +65,7 @@ const PaymentForm = ({ onCancel }) => {
       setTimeout(() => {
         setSuccess(true);
         setProcessing(false);
+        if (onSuccess) onSuccess(); // Refresh donations list
         setTimeout(() => {
           onCancel();
         }, 2000);

@@ -10,6 +10,7 @@ const stripePromise = loadStripe('pk_test_51T57FUHxCkOI8puXr89Rr0DQow5LIpfPIZZL9
 
 const Messages = () => {
   const [messages, setMessages] = useState([]);
+  const [donations, setDonations] = useState([]);
   const [formData, setFormData] = useState({
     name: '',
     message: '',
@@ -18,14 +19,44 @@ const Messages = () => {
   });
   const [showPayment, setShowPayment] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  // Load messages from localStorage on mount
+  // Load messages and donations from server on mount
   useEffect(() => {
-    const savedMessages = localStorage.getItem('weddingMessages');
-    if (savedMessages) {
-      setMessages(JSON.parse(savedMessages));
-    }
+    fetchMessages();
+    fetchDonations();
   }, []);
+
+  const fetchMessages = async () => {
+    try {
+      const response = await fetch('http://localhost:3001/api/messages');
+      if (response.ok) {
+        const data = await response.json();
+        setMessages(data);
+      }
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+      // Fallback to localStorage if server is not available
+      const savedMessages = localStorage.getItem('weddingMessages');
+      if (savedMessages) {
+        setMessages(JSON.parse(savedMessages));
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchDonations = async () => {
+    try {
+      const response = await fetch('http://localhost:3001/api/donations');
+      if (response.ok) {
+        const data = await response.json();
+        setDonations(data);
+      }
+    } catch (error) {
+      console.error('Error fetching donations:', error);
+    }
+  };
 
   const handleInputChange = (e) => {
     setFormData({
@@ -34,7 +65,7 @@ const Messages = () => {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!formData.name || !formData.message) {
@@ -42,19 +73,40 @@ const Messages = () => {
       return;
     }
 
-    const newMessage = {
-      id: Date.now(),
-      ...formData,
-      timestamp: new Date().toISOString(),
-    };
+    try {
+      const response = await fetch('http://localhost:3001/api/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
 
-    const updatedMessages = [newMessage, ...messages];
-    setMessages(updatedMessages);
-    localStorage.setItem('weddingMessages', JSON.stringify(updatedMessages));
-
-    setFormData({ name: '', message: '', email: '', phone: '' });
-    setSubmitted(true);
-    setTimeout(() => setSubmitted(false), 3000);
+      if (response.ok) {
+        const newMessage = await response.json();
+        setMessages([newMessage, ...messages]);
+        setFormData({ name: '', message: '', email: '', phone: '' });
+        setSubmitted(true);
+        setTimeout(() => setSubmitted(false), 3000);
+      } else {
+        alert('Failed to save message. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error submitting message:', error);
+      // Fallback to localStorage if server is not available
+      const newMessage = {
+        id: Date.now(),
+        ...formData,
+        timestamp: new Date().toISOString(),
+      };
+      const updatedMessages = [newMessage, ...messages];
+      setMessages(updatedMessages);
+      localStorage.setItem('weddingMessages', JSON.stringify(updatedMessages));
+      
+      setFormData({ name: '', message: '', email: '', phone: '' });
+      setSubmitted(true);
+      setTimeout(() => setSubmitted(false), 3000);
+    }
   };
 
   return (
@@ -188,7 +240,10 @@ const Messages = () => {
               </button>
             ) : (
               <Elements stripe={stripePromise}>
-                <PaymentForm onCancel={() => setShowPayment(false)} />
+                <PaymentForm 
+                  onCancel={() => setShowPayment(false)} 
+                  onSuccess={fetchDonations}
+                />
               </Elements>
             )}
 
@@ -197,6 +252,30 @@ const Messages = () => {
                 All transactions are secure and encrypted
               </p>
             </div>
+
+            {/* Donations List */}
+            {donations.length > 0 && (
+              <div className="mt-8">
+                <h3 className="font-serif text-xl font-bold text-floral-600 mb-4 text-center">
+                  Recent Gifts
+                </h3>
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {donations.map((donation) => (
+                    <div
+                      key={donation.id}
+                      className="bg-white/70 rounded-lg p-3 flex justify-between items-center"
+                    >
+                      <span className="font-sans text-sm text-gray-700">
+                        {donation.name}
+                      </span>
+                      <span className="font-sans text-sm font-semibold text-floral-600">
+                        {donation.amount}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </motion.div>
         </div>
 
@@ -211,7 +290,11 @@ const Messages = () => {
           </h2>
           
           <div className="grid md:grid-cols-2 gap-6">
-            {messages.length === 0 ? (
+            {loading ? (
+              <div className="col-span-2 text-center py-12">
+                <p className="font-sans text-gray-500">Loading messages...</p>
+              </div>
+            ) : messages.length === 0 ? (
               <div className="col-span-2 text-center py-12">
                 <p className="font-sans text-gray-500">
                   No messages yet. Be the first to share your blessings!

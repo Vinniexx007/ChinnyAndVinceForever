@@ -44,19 +44,6 @@ const Home = () => {
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            transition={{ delay: 0.2, type: 'spring' }}
-            className="mb-6"
-          >
-            <img 
-              src="/download/logo.png" 
-              alt="Wedding Logo" 
-              className="h-32 w-auto mx-auto object-contain"
-            />
-          </motion.div>
-          
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
             transition={{ delay: 0.3, type: 'spring' }}
             className="mb-8"
           >
@@ -107,7 +94,7 @@ const Home = () => {
       </section>
 
       {/* Quick Info Section */}
-      <section className="py-20 px-4 bg-white">
+      <section className="py-12 px-4 bg-white">
         <div className="max-w-4xl mx-auto text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}

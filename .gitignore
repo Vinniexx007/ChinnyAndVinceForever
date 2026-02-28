@@ -28,5 +28,9 @@ dist-ssr
 .env.local
 .env.production
 
-# Music files (add your own)
-public/music/*
+# Wedding messages data
+server/messages.json
+server/donations.json
+
+# Server dependencies
+server/node_modules
